@@ -166,7 +166,7 @@ export default function App() {
     // 4. Pass that `order_id` to the options below.
     
     const options = {
-      key: "rzp_test_RvTVPXYu2MB10d", // YOUR_KEY_ID
+      key: "rzp_live_RwIGdcj8CinSNy", // Updated Live Key ID
       amount: selectedProduct.price * 100, // Amount in paise
       currency: "INR",
       name: "Data Analytics Store",
