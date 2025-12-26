@@ -32,11 +32,6 @@ interface Product {
   tag?: string;
 }
 
-interface Customer {
-  name: string;
-  email: string;
-}
-
 // --- DATA ANALYTICS PRODUCT CONFIGURATION ---
 const PRODUCTS: Product[] = [
   {
@@ -122,17 +117,10 @@ const Badge = ({ children }: { children: React.ReactNode }) => (
 
 export default function App() {
   const [view, setView] = useState<"home" | "success">("home");
-  const [showCheckout, setShowCheckout] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [customer, setCustomer] = useState<Customer>({ name: "", email: "" });
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   // --- HANDLERS ---
-
-  const handleBuyNow = (product: Product) => {
-    setSelectedProduct(product);
-    setShowCheckout(true);
-  };
 
   const loadScript = (src: string): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -144,11 +132,9 @@ export default function App() {
     });
   };
 
-  const handlePayment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedProduct) return;
-
+  const handleBuyNow = async (product: Product) => {
     setIsProcessing(true);
+    setSelectedProduct(product);
 
     const res = await loadScript("https://checkout.razorpay.com/v1/checkout.js");
 
@@ -158,32 +144,21 @@ export default function App() {
       return;
     }
 
-    // NOTE FOR PRODUCTION:
-    // In a real backend implementation, you would:
-    // 1. Call your backend API here (e.g., fetch('/api/create-order'))
-    // 2. Pass the amount and currency
-    // 3. Receive the `order_id` from your backend (created via Razorpay SDK)
-    // 4. Pass that `order_id` to the options below.
-    
     const options = {
-      key: "rzp_live_RwIGdcj8CinSNy", // Updated Live Key ID
-      amount: selectedProduct.price * 100, // Amount in paise
+      key: "rzp_live_RwIGdcj8CinSNy", 
+      amount: product.price * 100, // Amount in paise
       currency: "INR",
       name: "Data Analytics Store",
-      description: selectedProduct.title,
+      description: product.title,
       image: "https://cdn-icons-png.flaticon.com/512/2703/2703511.png",
       handler: function (response: any) {
         setIsProcessing(false);
-        setShowCheckout(false);
         setView("success");
         window.scrollTo(0, 0);
         console.log("Payment Success:", response);
       },
-      prefill: {
-        name: customer.name,
-        email: customer.email,
-        contact: "",
-      },
+      // Removed manual prefill to let Razorpay ask for details if needed,
+      // or rely on user's saved Razorpay info.
       theme: { color: "#2563eb" },
       modal: {
         ondismiss: function() { setIsProcessing(false); }
@@ -222,83 +197,6 @@ export default function App() {
       </div>
     </nav>
   );
-
-  const CheckoutModal = () => {
-    if (!showCheckout || !selectedProduct) return null;
-
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
-          <div className="bg-slate-50 p-4 border-b border-slate-100 flex justify-between items-center">
-            <h3 className="font-bold text-slate-800 flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5 text-green-600" /> Secure Checkout
-            </h3>
-            <button
-              onClick={() => setShowCheckout(false)}
-              className="text-slate-400 hover:text-slate-600"
-            >
-              <X size={20} />
-            </button>
-          </div>
-
-          <div className="p-6">
-            {isProcessing ? (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-                <h4 className="text-lg font-bold text-slate-900">Processing Payment...</h4>
-                <p className="text-slate-500 text-sm mt-2">Connecting to Razorpay Secure Gateway</p>
-              </div>
-            ) : (
-              <form onSubmit={handlePayment} className="space-y-4">
-                <div className="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-100">
-                  <p className="text-sm text-blue-900 font-medium">Buying:</p>
-                  <div className="flex justify-between items-start mt-1">
-                    <span className="font-bold text-blue-900 text-sm">{selectedProduct.title}</span>
-                    <span className="font-bold text-blue-900 shrink-0 text-lg">₹{selectedProduct.price}</span>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
-                  <input
-                    required
-                    type="text"
-                    className="w-full rounded-lg border-slate-300 border p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    placeholder="John Doe"
-                    value={customer.name}
-                    onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
-                  <input
-                    required
-                    type="email"
-                    className="w-full rounded-lg border-slate-300 border p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    placeholder="john@example.com"
-                    value={customer.email}
-                    onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
-                  />
-                  <p className="text-xs text-slate-500 mt-1 flex items-center">
-                    <Lock size={12} className="mr-1" /> No login needed. We'll email the link.
-                  </p>
-                </div>
-
-                <div className="pt-4">
-                  <Button type="submit" variant="razorpay" className="w-full">
-                    Pay ₹{selectedProduct.price} Instantly
-                  </Button>
-                  <div className="text-center mt-3 text-xs text-slate-400">
-                    UPI • GooglePay • PhonePe • Cards
-                  </div>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   const HeroSection = () => (
     <div className="bg-white border-b border-slate-200">
@@ -355,7 +253,7 @@ export default function App() {
               </ul>
 
               <Button onClick={() => handleBuyNow(product)} className="w-full">
-                Buy Now
+                {isProcessing && selectedProduct?.id === product.id ? "Processing..." : "Buy Now"}
               </Button>
             </div>
           </div>
@@ -378,7 +276,7 @@ export default function App() {
             Payment Successful! 🎉
           </h1>
           <p className="text-slate-600 mb-8">
-            Thank you, <strong>{customer.name}</strong>. Your PDF is ready.
+            Thank you! Your PDF is ready.
           </p>
 
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-8 mb-8">
@@ -412,10 +310,22 @@ export default function App() {
     );
   };
 
+  const LoadingOverlay = () => {
+    if (!isProcessing) return null;
+    return (
+        <div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center">
+             <div className="text-center">
+                 <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                 <p className="text-slate-600 font-medium">Loading Secure Payment...</p>
+             </div>
+        </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-white font-sans text-slate-800">
       <Navbar />
-      <CheckoutModal />
+      <LoadingOverlay />
 
       <main>
         {view === "home" && (
