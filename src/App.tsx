@@ -2,16 +2,15 @@ import React, { useState } from "react";
 import {
   Download,
   ShieldCheck,
-  Star,
   CheckCircle,
   Lock,
-  FileText,
-  ChevronRight,
-  Mail,
-  CreditCard,
-  Smartphone,
+  FileBarChart,
+  BarChart3,
+  PieChart,
+  TrendingUp,
   X,
   Menu,
+  Zap,
 } from "lucide-react";
 
 // --- TYPESCRIPT DEFINITIONS ---
@@ -28,10 +27,9 @@ interface Product {
   description: string;
   price: number;
   originalPrice: number;
-  rating: number;
-  reviews: number;
   downloadLink: string;
   features: string[];
+  tag?: string;
 }
 
 interface Customer {
@@ -39,25 +37,39 @@ interface Customer {
   email: string;
 }
 
-// --- PRODUCT CONFIGURATION ---
-const PRODUCT: Product = {
-  id: "PDF-001",
-  title: "Premium Study PDF",
-  description:
-    "The ultimate guide to mastering your studies. concise, actionable, and designed for high retention.",
-  price: 499,
-  originalPrice: 999,
-  rating: 4.9,
-  reviews: 1542,
-  downloadLink:
-    "https://drive.google.com/file/d/16XL0NWy7SkXPaMXWpzx68pLqgF3S0se3/view",
-  features: [
-    "Instant PDF Download",
-    "Mobile & Tablet Friendly",
-    "Lifetime Access",
-    "Printable High-Quality Layout",
-  ],
-};
+// --- DATA ANALYTICS PRODUCT CONFIGURATION ---
+const PRODUCTS: Product[] = [
+  {
+    id: "DA-001",
+    title: "Introduction to Data Analytics",
+    description: "The perfect starting point. Learn the core concepts, lifecycle, and tools used in modern data analytics.",
+    price: 9,
+    originalPrice: 49,
+    downloadLink: "https://drive.google.com/file/d/103dZ6E5EB-dQb_oBYAE5aaqub6KrD-il/view",
+    features: ["Analytics Lifecycle", "Key Terminology", "Tools Overview"],
+    tag: "Essential"
+  },
+  {
+    id: "DA-002",
+    title: "Basic Mathematics for Data Analytics",
+    description: "Brush up on the essential math needed for data science without getting lost in complex theory.",
+    price: 9,
+    originalPrice: 49,
+    downloadLink: "https://drive.google.com/file/d/1XjKuok3mZdePr5AZ4CcUzqHJ47-9a9Cr/view",
+    features: ["Linear Algebra Basics", "Probability", "Calculus for ML"],
+    tag: "Best Value"
+  },
+  {
+    id: "DA-003",
+    title: "Statistics for Data Analysis",
+    description: "Master descriptive and inferential statistics to draw meaningful insights from your datasets.",
+    price: 9,
+    originalPrice: 49,
+    downloadLink: "https://drive.google.com/file/d/1pHcInT93ComnDQvhqA6MAKOjM5ALORXA/view",
+    features: ["Hypothesis Testing", "Distributions", "Regression Analysis"],
+    tag: "Advanced"
+  }
+];
 
 // --- COMPONENTS ---
 
@@ -82,7 +94,7 @@ const Button: React.FC<ButtonProps> = ({
       "bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-blue-500/30",
     secondary:
       "bg-white text-blue-600 border-2 border-blue-600 hover:bg-blue-50",
-    razorpay: "bg-[#0c238a] text-white hover:bg-[#0e2aa0] shadow-md", // Razorpay Blue brand color
+    razorpay: "bg-[#0c238a] text-white hover:bg-[#0e2aa0] shadow-md",
     outline:
       "bg-transparent text-slate-600 border border-slate-200 hover:border-slate-400",
   };
@@ -113,80 +125,71 @@ export default function App() {
   const [showCheckout, setShowCheckout] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [customer, setCustomer] = useState<Customer>({ name: "", email: "" });
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   // --- HANDLERS ---
 
-  const handleBuyNow = () => {
+  const handleBuyNow = (product: Product) => {
+    setSelectedProduct(product);
     setShowCheckout(true);
   };
 
-  // Helper to load Razorpay Script dynamically
   const loadScript = (src: string): Promise<boolean> => {
     return new Promise((resolve) => {
       const script = document.createElement("script");
       script.src = src;
-      script.onload = () => {
-        resolve(true);
-      };
-      script.onerror = () => {
-        resolve(false);
-      };
+      script.onload = () => { resolve(true); };
+      script.onerror = () => { resolve(false); };
       document.body.appendChild(script);
     });
   };
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedProduct) return;
+
     setIsProcessing(true);
 
-    // 1. Load Razorpay SDK
-    const res = await loadScript(
-      "https://checkout.razorpay.com/v1/checkout.js"
-    );
+    const res = await loadScript("https://checkout.razorpay.com/v1/checkout.js");
 
     if (!res) {
-      alert(
-        "Razorpay SDK failed to load. Please check your internet connection."
-      );
+      alert("Razorpay SDK failed to load. Please check your internet connection.");
       setIsProcessing(false);
       return;
     }
 
-    // 2. Setup Options
+    // NOTE FOR PRODUCTION:
+    // In a real backend implementation, you would:
+    // 1. Call your backend API here (e.g., fetch('/api/create-order'))
+    // 2. Pass the amount and currency
+    // 3. Receive the `order_id` from your backend (created via Razorpay SDK)
+    // 4. Pass that `order_id` to the options below.
+    
     const options = {
-      key: "rzp_test_RvTVPXYu2MB10d", // User provided Key ID
-      amount: PRODUCT.price * 100, // Amount is in paise (499 * 100 = 49900)
+      key: "rzp_test_RvTVPXYu2MB10d", // YOUR_KEY_ID
+      amount: selectedProduct.price * 100, // Amount in paise
       currency: "INR",
-      name: "StudyPremium",
-      description: PRODUCT.title,
-      image: "https://cdn-icons-png.flaticon.com/512/337/337946.png", // Added a generic PDF logo
+      name: "Data Analytics Store",
+      description: selectedProduct.title,
+      image: "https://cdn-icons-png.flaticon.com/512/2703/2703511.png",
       handler: function (response: any) {
-        // 3. Handle Success
         setIsProcessing(false);
         setShowCheckout(false);
         setView("success");
         window.scrollTo(0, 0);
-        console.log("Payment ID: ", response.razorpay_payment_id);
+        console.log("Payment Success:", response);
       },
       prefill: {
         name: customer.name,
         email: customer.email,
-        contact: "", // Left empty to let user fill in Razorpay popup if needed
+        contact: "",
       },
-      notes: {
-        address: "Razorpay Corporate Office",
-      },
-      theme: {
-        color: "#2563eb", // Brand Blue
-      },
+      theme: { color: "#2563eb" },
       modal: {
-        ondismiss: function() {
-            setIsProcessing(false);
-        }
+        ondismiss: function() { setIsProcessing(false); }
       }
     };
 
-    // 4. Open Razorpay
     try {
       const paymentObject = new window.Razorpay(options);
       paymentObject.on("payment.failed", function (response: any) {
@@ -205,29 +208,23 @@ export default function App() {
 
   const Navbar = () => (
     <nav className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-100">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <div
           className="flex items-center gap-2 font-bold text-xl text-slate-900 cursor-pointer"
           onClick={() => setView("home")}
         >
-          <FileText className="text-blue-600" />
-          <span>
-            Study<span className="text-blue-600">Premium</span>
-          </span>
+          <BarChart3 className="text-blue-600" />
+          <span>Data<span className="text-blue-600">Foundations</span></span>
         </div>
-        <Button
-          variant="primary"
-          className="!py-2 !px-4 text-sm"
-          onClick={handleBuyNow}
-        >
-          Buy Now
-        </Button>
+        <div className="text-sm font-medium text-slate-500 hidden sm:block">
+          Launch Offer: All PDFs @ ₹9
+        </div>
       </div>
     </nav>
   );
 
   const CheckoutModal = () => {
-    if (!showCheckout) return null;
+    if (!showCheckout || !selectedProduct) return null;
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -248,72 +245,51 @@ export default function App() {
             {isProcessing ? (
               <div className="text-center py-8">
                 <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-                <h4 className="text-lg font-bold text-slate-900">
-                  Processing Payment...
-                </h4>
-                <p className="text-slate-500 text-sm mt-2">
-                  Connecting to Razorpay Secure Gateway
-                </p>
-                <p className="text-xs text-slate-400 mt-4">
-                  Please check the pop-up window
-                </p>
+                <h4 className="text-lg font-bold text-slate-900">Processing Payment...</h4>
+                <p className="text-slate-500 text-sm mt-2">Connecting to Razorpay Secure Gateway</p>
               </div>
             ) : (
               <form onSubmit={handlePayment} className="space-y-4">
                 <div className="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-100">
-                  <p className="text-sm text-blue-900 font-medium">
-                    Order Summary
-                  </p>
-                  <div className="flex justify-between items-center mt-1">
-                    <span className="font-bold text-blue-900">
-                      {PRODUCT.title}
-                    </span>
-                    <span className="font-bold text-blue-900">
-                      ₹{PRODUCT.price}
-                    </span>
+                  <p className="text-sm text-blue-900 font-medium">Buying:</p>
+                  <div className="flex justify-between items-start mt-1">
+                    <span className="font-bold text-blue-900 text-sm">{selectedProduct.title}</span>
+                    <span className="font-bold text-blue-900 shrink-0 text-lg">₹{selectedProduct.price}</span>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Full Name
-                  </label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
                   <input
                     required
                     type="text"
                     className="w-full rounded-lg border-slate-300 border p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    placeholder="Enter your name"
+                    placeholder="John Doe"
                     value={customer.name}
-                    onChange={(e) =>
-                      setCustomer({ ...customer, name: e.target.value })
-                    }
+                    onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Email Address
-                  </label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
                   <input
                     required
                     type="email"
                     className="w-full rounded-lg border-slate-300 border p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    placeholder="Where should we send the PDF?"
+                    placeholder="john@example.com"
                     value={customer.email}
-                    onChange={(e) =>
-                      setCustomer({ ...customer, email: e.target.value })
-                    }
+                    onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
                   />
                   <p className="text-xs text-slate-500 mt-1 flex items-center">
-                    <Lock size={12} className="mr-1" /> No account needed.
+                    <Lock size={12} className="mr-1" /> No login needed. We'll email the link.
                   </p>
                 </div>
 
                 <div className="pt-4">
                   <Button type="submit" variant="razorpay" className="w-full">
-                    Pay ₹{PRODUCT.price} via Razorpay
+                    Pay ₹{selectedProduct.price} Instantly
                   </Button>
                   <div className="text-center mt-3 text-xs text-slate-400">
-                    UPI • Credit Card • Net Banking
+                    UPI • GooglePay • PhonePe • Cards
                   </div>
                 </div>
               </form>
@@ -325,122 +301,116 @@ export default function App() {
   };
 
   const HeroSection = () => (
-    <section className="bg-white pt-16 pb-24 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto text-center">
-        <Badge>Instant Download</Badge>
-        <h1 className="mt-6 text-4xl font-extrabold text-slate-900 sm:text-5xl md:text-6xl tracking-tight">
-          {PRODUCT.title} <br />
-          <span className="text-blue-600">Instant Access</span>
-        </h1>
-        <p className="mt-4 max-w-2xl mx-auto text-xl text-slate-500">
-          {PRODUCT.description} Secure your copy today and start learning
-          immediately. No login required.
-        </p>
+    <div className="bg-white border-b border-slate-200">
+       <div className="max-w-5xl mx-auto text-center py-20 px-4">
+          <Badge>Limited Time Offer</Badge>
+          <h1 className="mt-6 text-4xl font-extrabold text-slate-900 sm:text-6xl tracking-tight">
+             Data Analytics Foundations <br />
+             <span className="text-blue-600">PDFs at Just ₹9</span>
+          </h1>
+          <p className="mt-6 max-w-2xl mx-auto text-lg text-slate-500">
+             Start your data journey today. High-quality study materials covering Math, Stats, and Core Analytics concepts.
+          </p>
+          <div className="mt-8 flex items-center justify-center gap-4 text-sm font-medium text-slate-500">
+             <span className="flex items-center"><Download className="h-4 w-4 mr-1 text-green-600"/> Instant Download</span>
+             <span className="flex items-center"><ShieldCheck className="h-4 w-4 mr-1 text-green-600"/> Secure Payment</span>
+             <span className="flex items-center"><Lock className="h-4 w-4 mr-1 text-green-600"/> No Login Required</span>
+          </div>
+       </div>
+    </div>
+  );
 
-        <div className="mt-10 flex flex-col items-center gap-4">
-          <div className="p-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl shadow-xl">
-            <div className="bg-white rounded-xl p-8 w-full max-w-md">
-              <div className="flex justify-center mb-6">
-                <div className="h-24 w-24 bg-blue-50 rounded-full flex items-center justify-center text-blue-600">
-                  <FileText size={48} />
-                </div>
-              </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">
-                {PRODUCT.title}
-              </h3>
-              <div className="flex items-center justify-center gap-2 mb-6">
-                <span className="text-3xl font-bold text-slate-900">
-                  ₹{PRODUCT.price}
-                </span>
-                <span className="text-lg text-slate-400 line-through">
-                  ₹{PRODUCT.originalPrice}
-                </span>
-                <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded">
-                  50% OFF
-                </span>
-              </div>
+  const ProductList = () => (
+    <section className="py-16 px-4 sm:px-6 lg:px-8 bg-slate-50">
+      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+        {PRODUCTS.map((product) => (
+          <div key={product.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden relative group">
+            <div className="absolute top-0 right-0 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-bl-lg z-10">
+              {product.tag}
+            </div>
+            
+            <div className="p-8 bg-white border-b border-slate-100 flex flex-col items-center text-center group-hover:bg-blue-50/30 transition-colors">
+               <div className="h-16 w-16 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-4">
+                  {product.id === 'DA-001' && <FileBarChart size={32} />}
+                  {product.id === 'DA-002' && <TrendingUp size={32} />}
+                  {product.id === 'DA-003' && <PieChart size={32} />}
+               </div>
+               <h3 className="text-lg font-bold text-slate-900 min-h-[56px] flex items-center">{product.title}</h3>
+               <div className="flex items-center gap-2 mt-4">
+                 <span className="text-3xl font-black text-slate-900">₹{product.price}</span>
+                 <span className="text-sm text-slate-400 line-through">₹{product.originalPrice}</span>
+               </div>
+            </div>
 
-              <ul className="text-left space-y-3 mb-8">
-                {PRODUCT.features.map((feature, i) => (
-                  <li key={i} className="flex items-center text-slate-600">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-3 shrink-0" />
+            <div className="p-6 flex-1 flex flex-col">
+              <p className="text-slate-600 text-sm mb-6 flex-1">{product.description}</p>
+              
+              <ul className="space-y-3 mb-8">
+                {product.features.map((feature, i) => (
+                  <li key={i} className="flex items-start text-xs font-medium text-slate-500">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2 shrink-0" />
                     {feature}
                   </li>
                 ))}
               </ul>
 
-              <Button
-                onClick={handleBuyNow}
-                className="w-full text-lg shadow-blue-500/25"
-              >
+              <Button onClick={() => handleBuyNow(product)} className="w-full">
                 Buy Now
               </Button>
-              <p className="text-xs text-slate-400 mt-3 flex items-center justify-center">
-                <ShieldCheck size={12} className="mr-1" /> Pay securely via
-                Razorpay
-              </p>
             </div>
           </div>
-
-          <div className="flex items-center gap-6 mt-8 text-sm font-medium text-slate-500">
-            <span className="flex items-center">
-              <ShieldCheck className="h-4 w-4 mr-1 text-green-600" /> 100%
-              Secure
-            </span>
-            <span className="flex items-center">
-              <Download className="h-4 w-4 mr-1 text-green-600" /> Instant PDF
-            </span>
-            <span className="flex items-center">
-              <Lock className="h-4 w-4 mr-1 text-green-600" /> No Login
-            </span>
-          </div>
-        </div>
+        ))}
       </div>
     </section>
   );
 
-  const SuccessPage = () => (
-    <div className="min-h-[80vh] flex items-center justify-center bg-white px-4">
-      <div className="max-w-lg w-full text-center">
-        <div className="mx-auto h-24 w-24 bg-green-100 rounded-full flex items-center justify-center mb-6 animate-bounce">
-          <CheckCircle className="h-12 w-12 text-green-600" />
-        </div>
+  const SuccessPage = () => {
+    if (!selectedProduct) return null;
 
-        <h1 className="text-3xl font-extrabold text-slate-900 mb-2">
-          Payment Successful! 🎉
-        </h1>
-        <p className="text-slate-600 mb-8">
-          Thank you, <strong>{customer.name}</strong>. Your payment was
-          processed successfully.
-        </p>
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center bg-white px-4">
+        <div className="max-w-lg w-full text-center">
+          <div className="mx-auto h-24 w-24 bg-green-100 rounded-full flex items-center justify-center mb-6 animate-bounce">
+            <CheckCircle className="h-12 w-12 text-green-600" />
+          </div>
 
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-8 mb-8">
-          <h3 className="font-bold text-slate-900 mb-4 text-lg">
-            Your Download is Ready
-          </h3>
-          <a
-            href={PRODUCT.downloadLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center w-full bg-blue-600 text-white font-bold py-4 px-6 rounded-lg hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/30"
-          >
-            <Download className="mr-2 h-5 w-5" />
-            Download PDF Now
-          </a>
-          <p className="text-xs text-slate-400 mt-4">
-            Link expires in 24 hours. Please save the file.
+          <h1 className="text-3xl font-extrabold text-slate-900 mb-2">
+            Payment Successful! 🎉
+          </h1>
+          <p className="text-slate-600 mb-8">
+            Thank you, <strong>{customer.name}</strong>. Your PDF is ready.
           </p>
-        </div>
 
-        <button
-          onClick={() => setView("home")}
-          className="text-slate-500 hover:text-blue-600 font-medium text-sm"
-        >
-          Return to Home
-        </button>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-8 mb-8">
+            <h3 className="font-bold text-slate-900 mb-2 text-lg">
+              {selectedProduct.title}
+            </h3>
+            <p className="text-sm text-slate-500 mb-6">Format: PDF (Digital Download)</p>
+            
+            <a
+              href={selectedProduct.downloadLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center w-full bg-blue-600 text-white font-bold py-4 px-6 rounded-lg hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/30"
+            >
+              <Download className="mr-2 h-5 w-5" />
+              Download PDF Now
+            </a>
+            <p className="text-xs text-slate-400 mt-4">
+              Please save this link for future access.
+            </p>
+          </div>
+
+          <button
+            onClick={() => setView("home")}
+            className="text-slate-500 hover:text-blue-600 font-medium text-sm"
+          >
+            Return to Store
+          </button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen bg-white font-sans text-slate-800">
@@ -451,55 +421,19 @@ export default function App() {
         {view === "home" && (
           <>
             <HeroSection />
-
-            {/* Simple FAQ / Trust Section */}
-            <div className="bg-slate-50 py-16 px-4">
-              <div className="max-w-3xl mx-auto space-y-8">
-                <div className="text-center mb-10">
-                  <h2 className="text-2xl font-bold text-slate-900">
-                    Frequently Asked Questions
-                  </h2>
-                </div>
-
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                  <h3 className="font-bold text-slate-900 mb-2">
-                    How do I receive the PDF?
-                  </h3>
-                  <p className="text-slate-600 text-sm">
-                    Immediately after payment, you will see a download button.
-                    We also recommend saving the link.
-                  </p>
-                </div>
-
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                  <h3 className="font-bold text-slate-900 mb-2">
-                    Is payment secure?
-                  </h3>
-                  <p className="text-slate-600 text-sm">
-                    Yes, we use Razorpay (India's leading gateway) which
-                    supports UPI, Credit Cards, and Net Banking securely.
-                  </p>
-                </div>
-              </div>
-            </div>
+            <ProductList />
           </>
         )}
 
         {view === "success" && <SuccessPage />}
       </main>
 
-      <footer className="bg-slate-900 text-slate-400 py-8 text-center text-sm">
-        <p>&copy; 2024 StudyPremium. All rights reserved.</p>
+      <footer className="bg-white border-t border-slate-100 py-8 text-center text-sm text-slate-400">
+        <p>&copy; 2024 DataFoundations. All rights reserved.</p>
         <div className="flex justify-center gap-4 mt-4">
-          <span className="cursor-pointer hover:text-white">
-            Privacy Policy
-          </span>
-          <span className="cursor-pointer hover:text-white">
-            Terms of Service
-          </span>
-          <span className="cursor-pointer hover:text-white">
-            Contact Support
-          </span>
+          <span className="hover:text-slate-600 cursor-pointer">Privacy</span>
+          <span className="hover:text-slate-600 cursor-pointer">Terms</span>
+          <span className="hover:text-slate-600 cursor-pointer">Support</span>
         </div>
       </footer>
     </div>
